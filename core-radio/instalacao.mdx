@@ -114,6 +114,95 @@ Toda a comunicação com o framework está isolada em `config/functions.lua`.
 
 ---
 
+## Adaptação do pma-voice
+
+A versão do pma-voice fornecida com o script já contém todos os ajustes abaixo. **Use essa versão sempre que possível.**
+
+Se você já tem uma versão modificada do pma-voice no servidor (com outras adaptações que não quer perder), aplique manualmente as alterações abaixo no arquivo `client/module/radio.lua` do seu pma-voice.
+
+<Steps>
+  <Step title="Adicione a função helper de animação">
+    No topo do arquivo `client/module/radio.lua` do pma-voice (antes do `RegisterCommand("+radiotalk", ...)`), adicione:
+
+    ```lua
+    local function getRadioAnimData()
+        if GetResourceState("core-radio") == "started" then
+            local ok, data = pcall(exports["core-radio"].getRadioAnimData, exports["core-radio"])
+            if ok and data then return data end
+        end
+        return { dict = "random@arrests", anim = "generic_radio_chatter", blend = 8.0, blendOut = 0.0, flag = 49 }
+    end
+    ```
+
+    Esta função consulta o export `getRadioAnimData` do Core Radio para descobrir qual animação o jogador selecionou. Se o Core Radio não estiver iniciado, usa a animação genérica de fallback.
+  </Step>
+
+  <Step title="Substitua a animação no comando +radiotalk">
+    Dentro do `RegisterCommand("+radiotalk", function() ... end)`, **substitua o trecho que toca a animação fixa** pelo bloco abaixo:
+
+    ```lua
+    local ad = getRadioAnimData()
+
+    loadAnimDictCustom(ad.dict)
+    TaskPlayAnim(Ped, ad.dict, ad.anim, ad.blend, ad.blendOut, -1, ad.flag, 0, false, false, false)
+
+    if ad.bone then
+        local BoneIndex = GetPedBoneIndex(Ped, ad.bone)
+        local Hash      = GetHashKey("prop_cs_hand_radio")
+        local Coords    = GetOffsetFromEntityInWorldCoords(Ped, 0.0, 0.0, -5.0)
+        RadioProp = CreateObject(Hash, Coords.x, Coords.y, Coords.z, false, false, false)
+
+        SetEntityCollision(RadioProp, false, false)
+        SetEntityCompletelyDisableCollision(RadioProp, true, true)
+        AttachEntityToEntity(
+            RadioProp, Ped, BoneIndex,
+            ad.coords.x, ad.coords.y, ad.coords.z,
+            ad.rot.x,    ad.rot.y,    ad.rot.z,
+            true, false, false, false, ad.vertex or 1, true
+        )
+    end
+    ```
+
+    O bloco `if ad.bone then` cria e attacha o prop 3D apenas para animações que tenham a posição configurada — nas animações genéricas isso é ignorado.
+  </Step>
+
+  <Step title="Substitua a verificação no loop de fala">
+    Dentro da `CreateThread` do `+radiotalk` (loop `while radioPressed do`), substitua a verificação de animação fixa por:
+
+    ```lua
+    if not IsEntityPlayingAnim(Ped, ad.dict, ad.anim, 3) then
+        TaskPlayAnim(Ped, ad.dict, ad.anim, ad.blend, ad.blendOut, -1, ad.flag, 0, false, false, false)
+    end
+    ```
+
+    Isso garante que a animação correta seja reaplicada caso o jogador seja interrompido (ex: hit reaction).
+  </Step>
+
+  <Step title="Substitua a animação no comando -radiotalk">
+    Dentro do `RegisterCommand("-radiotalk", function() ... end)`, substitua o `StopAnimTask` fixo por:
+
+    ```lua
+    local ad = getRadioAnimData()
+    StopAnimTask(PlayerPedId(), ad.dict, ad.anim, -4.0)
+    ```
+
+    E garanta que o prop seja removido logo em seguida:
+
+    ```lua
+    if DoesEntityExist(RadioProp) then
+        DeleteObject(RadioProp)
+    end
+    RadioProp = nil
+    ```
+  </Step>
+</Steps>
+
+<Tip>
+  Após aplicar os 4 passos, reinicie o servidor. A integração estará completa — quando o jogador trocar de animação no painel do Core Radio, o pma-voice passará a usar a nova animação automaticamente na próxima vez que apertar para falar.
+</Tip>
+
+---
+
 ## Configuração
 
 <AccordionGroup>
