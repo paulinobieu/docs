@@ -1,7 +1,6 @@
 ---
 title: "Instalação"
 description: "Passo a passo para instalar e configurar o Core Pets no seu servidor FiveM."
-icon: "wrench"
 ---
 
 ## Dependências
@@ -301,12 +300,3 @@ Toda a comunicação com o framework está isolada em `config/functions.lua`. Pa
   </Accordion>
 </AccordionGroup>
 
----
-
-## Migração de Dados Antigos
-
-Se você está atualizando de uma versão anterior que usava stacks (quantidade), o Core Pets converte automaticamente os dados da tabela `core_pets_collections` para instâncias individuais na primeira inicialização.
-
-<Note>
-  A migração roda apenas uma vez e é idempotente — não duplica dados. Mantenha a tabela `core_pets_collections` no banco mesmo após a migração.
-</Note>
