@@ -45,7 +45,7 @@
             "pages": [
               {
                 "group": "Core Pets",
-                "icon": "paw-print",
+                "icon": "paw",
                 "pages": [
                   "core-pets/apresentacao",
                   "core-pets/instalacao",
@@ -70,6 +70,11 @@
   },
   "navbar": {
     "links": [
+      {
+        "label": "Painel do Cliente",
+        "href": "https://corenetwork.dev",
+        "type": "button"
+      },
       {
         "label": "Suporte",
         "href": "https://discord.gg/57DNCnkagj"
