@@ -1,0 +1,193 @@
+---
+title: "Instalação"
+description: "Passo a passo para instalar e configurar o Core Radio no seu servidor FiveM."
+---
+
+## Dependências
+
+<CardGroup cols={2}>
+  <Card title="pma-voice (adaptado)" icon="microphone">
+    Versão do pma-voice fornecida com o script, já adaptada para integração com o Core Radio. Substitui o pma-voice padrão do servidor.
+  </Card>
+  <Card title="Qualquer framework" icon="puzzle-piece">
+    A integração com o framework é feita adaptando `config/functions.lua`, sem acoplamento direto.
+  </Card>
+</CardGroup>
+
+<Warning>
+  O Core Radio **não funciona** com o pma-voice padrão sem as adaptações. Use obrigatoriamente a versão fornecida com o script.
+</Warning>
+
+<Info>
+  O Core Radio **não cria tabelas no banco de dados**. Nenhuma configuração de MySQL é necessária.
+</Info>
+
+---
+
+## Instalação do Recurso
+
+<Steps>
+  <Step title="Substitua o pma-voice">
+    Remova o pma-voice atual do servidor e coloque no lugar a versão fornecida com o Core Radio.
+  </Step>
+  <Step title="Copie a pasta do recurso">
+    Coloque a pasta `core-radio` dentro do diretório de recursos do seu servidor (ex: `resources/[core]/`).
+  </Step>
+  <Step title="Adapte o config/functions.lua">
+    Este é o único arquivo que precisa ser editado para integrar ao seu framework. Veja a seção [Adaptação de Framework](#adaptação-de-framework) abaixo.
+  </Step>
+  <Step title="Configure o recurso">
+    Edite `config/config.lua` conforme descrito na seção [Configuração](#configuração).
+  </Step>
+  <Step title="Adicione à server.cfg">
+    Certifique-se de iniciar o `pma-voice` antes do `core-radio`.
+
+    ```
+    ensure pma-voice
+    ensure seu-framework
+    ensure core-radio
+    ```
+  </Step>
+</Steps>
+
+---
+
+## Adaptação de Framework
+
+Toda a comunicação com o framework está isolada em `config/functions.lua`.
+
+<AccordionGroup>
+  <Accordion title="Identificação do jogador" icon="user">
+    ```lua
+    function Functions.getUserId(source)
+        -- Exemplo vRP:
+        return vRP.Passport(source)
+    end
+
+    function Functions.getUserSource(user_id)
+        return vRP.Source(user_id)
+    end
+
+    function Functions.getUserName(user_id)
+        local name = vRP.FullName(user_id)
+        return name or "Desconhecido"
+    end
+    ```
+  </Accordion>
+
+  <Accordion title="Permissões" icon="shield">
+    Usada para validar o acesso a frequências restritas. Recebe a lista de grupos configurada em `RestrictedFrequencies` e retorna `true` se o jogador tiver ao menos um deles.
+
+    ```lua
+    function Functions.hasPermission(user_id, permissions)
+        if not permissions then return true end
+        if type(permissions) == "table" then
+            for _, perm in ipairs(permissions) do
+                if vRP.HasGroup(user_id, perm) then return true end
+            end
+            return false
+        end
+        return vRP.HasGroup(user_id, permissions)
+    end
+    ```
+  </Accordion>
+
+  <Accordion title="Item de rádio" icon="walkie-talkie">
+    Verifica se o jogador possui o item configurado em `Radio.RequiredItem` antes de permitir a abertura do rádio.
+
+    ```lua
+    function Functions.hasItem(user_id, item, amount)
+        -- Exemplo vRP:
+        return vRP.ConsultItem(user_id, item, amount or 1)
+
+        -- Exemplo ESX:
+        -- local xPlayer = ESX.GetPlayerFromId(Functions.getUserSource(user_id))
+        -- return xPlayer and xPlayer.getInventoryItem(item).count >= (amount or 1)
+
+        -- Exemplo QBCore:
+        -- local Player = QBCore.Functions.GetPlayer(Functions.getUserSource(user_id))
+        -- return Player and Player.Functions.GetItemByName(item) ~= nil
+    end
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Configuração
+
+<AccordionGroup>
+  <Accordion title="config/config.lua — Geral" icon="sliders">
+    ```lua
+    Radio.Command       = "radio"              -- Comando para abrir o rádio
+    Radio.EnableCommand = false                -- false = comando desabilitado (acesso só por item)
+    Radio.RequiredItem  = "radio"              -- Item obrigatório no inventário para abrir
+    Radio.RadioProp     = "prop_cs_hand_radio" -- Modelo 3D do rádio na mão
+    Radio.DefaultVolume = 60                   -- Volume padrão ao conectar (0–100)
+    Radio.MinFrequency  = 1
+    Radio.MaxFrequency  = 999
+    ```
+  </Accordion>
+
+  <Accordion title="config/config.lua — Animação e UI" icon="person-walking">
+    ```lua
+    -- Animação de abertura/fechamento do rádio
+    Radio.AnimDict  = "cellphone@"
+    Radio.AnimName  = "cellphone_text_read_base"
+    Radio.BoneIndex = 28422  -- Bone de attach do prop 3D na mão
+
+    -- Interface
+    Radio.ThemeColor    = "#0143bb"  -- Cor principal da interface
+    Radio.RadioAlign    = "left"     -- Lado da tela para o painel de rádio
+    Radio.SpeakingAlign = "right"    -- Lado da tela para o indicador de fala
+    ```
+  </Accordion>
+
+  <Accordion title="config/config.lua — Frequências Restritas" icon="lock">
+    Define quais frequências exigem permissão específica para acesso. A validação é feita server-side.
+
+    ```lua
+    Radio.RestrictedFrequencies = {
+        [1]   = { "Admin" },   -- Frequência 1: somente jogadores com grupo Admin
+        [190] = { "Policia" }, -- Frequência 190: somente jogadores com grupo Policia
+    }
+    ```
+
+    Os valores devem corresponder ao sistema de grupos do seu framework, pois são passados diretamente para `Functions.hasPermission`.
+  </Accordion>
+
+  <Accordion title="config/config.lua — Animações" icon="film">
+    Define as 18 animações disponíveis para seleção na interface. Cada entrada pode conter:
+
+    | Campo      | Tipo      | Obrigatório | Descrição                                   |
+    |------------|-----------|:-----------:|---------------------------------------------|
+    | `dict`     | `string`  | ✓           | Dicionário de animação                      |
+    | `anim`     | `string`  | ✓           | Nome da animação                            |
+    | `blend`    | `number`  | ✓           | Velocidade de entrada                       |
+    | `blendOut` | `number`  | ✓           | Velocidade de saída                         |
+    | `flag`     | `number`  | ✓           | Flag da animação                            |
+    | `bone`     | `number`  |             | Bone de attach do prop (animações com prop) |
+    | `coords`   | `vector3` |             | Offset de posição do prop                   |
+    | `rot`      | `vector3` |             | Offset de rotação do prop                   |
+    | `vertex`   | `number`  |             | Tipo de vertex para attach                  |
+
+    ```lua
+    Radio.Animations = {
+        ["1"] = { dict = "random@arrests", anim = "generic_radio_chatter", blend = 8.0, blendOut = 0.0, flag = 49 },
+        ["2"] = {
+            dict   = "anim@male@holding_radio",
+            anim   = "holding_radio_clip",
+            bone   = 28422,
+            coords = vector3(0.075, 0.023, -0.023),
+            rot    = vector3(-90.0, 0.0, -59.9),
+            blend  = 8.0, blendOut = 0.0, flag = 49, vertex = 2
+        },
+        -- Animações 3–18 usam os dicionários "pazeee@radio*" incluídos na pasta stream/
+    }
+    ```
+
+    <Note>
+      As animações personalizadas (`pazeee@radio*`) já estão na pasta `stream/` do recurso e são carregadas automaticamente pelo FiveM. Não é necessário instalar nada extra.
+    </Note>
+  </Accordion>
+</AccordionGroup>

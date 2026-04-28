@@ -57,6 +57,22 @@
                     ]
                   }
                 ]
+              },
+              {
+                "group": "Core Totem",
+                "icon": "cash-register",
+                "pages": [
+                  "core-totem/apresentacao",
+                  "core-totem/instalacao"
+                ]
+              },
+              {
+                "group": "Core Radio",
+                "icon": "radio",
+                "pages": [
+                  "core-radio/apresentacao",
+                  "core-radio/instalacao"
+                ]
               }
             ]
           }
