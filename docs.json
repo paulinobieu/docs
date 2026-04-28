@@ -9,49 +9,60 @@
   },
   "favicon": "/favicon.svg",
   "navigation": {
-    "tabs": [
-      {
-        "tab": "Início",
-        "groups": [
-          {
-            "group": "Geral",
-            "pages": [
-              "welcome",
-              "termos-de-uso",
-              "dicas"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "Core Pets",
-        "groups": [
-          {
-            "group": "Geral",
-            "pages": [
-              "core-pets/apresentacao",
-              "core-pets/instalacao"
-            ]
-          },
-          {
-            "group": "API",
-            "pages": [
-              "core-pets/api/exports",
-              "core-pets/api/eventos"
-            ]
-          }
-        ]
-      }
-    ],
     "global": {
       "anchors": [
+        {
+          "anchor": "Documentação",
+          "href": "/welcome",
+          "icon": "book-open"
+        },
+        {
+          "anchor": "Site",
+          "href": "https://corenetwork.dev",
+          "icon": "globe"
+        },
         {
           "anchor": "Discord",
           "href": "https://discord.gg/corenetwork",
           "icon": "discord"
         }
       ]
-    }
+    },
+    "tabs": [
+      {
+        "tab": "Documentação",
+        "groups": [
+          {
+            "group": "Comece por aqui!",
+            "pages": [
+              "welcome",
+              "termos-de-uso",
+              "dicas"
+            ]
+          },
+          {
+            "group": "Nossos produtos",
+            "pages": [
+              {
+                "group": "Core Pets",
+                "icon": "paw-print",
+                "pages": [
+                  "core-pets/apresentacao",
+                  "core-pets/instalacao",
+                  {
+                    "group": "API",
+                    "pages": [
+                      "core-pets/api/exports",
+                      "core-pets/api/eventos"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
   },
   "logo": {
     "light": "/logo/light.svg",
