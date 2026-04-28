@@ -6,20 +6,20 @@ icon: "wrench"
 
 ## Dependências
 
-Antes de instalar, certifique-se de que as seguintes dependências estão presentes e funcionando no seu servidor.
+O Core Pets possui **apenas uma dependência obrigatória**. A integração com o seu framework é feita através de um arquivo de adaptação separado — não existe acoplamento direto com nenhum framework específico.
 
 <CardGroup cols={2}>
-  <Card title="vRP Framework" icon="server">
-    O Core Pets utiliza o sistema de usuários, permissões e configurações do vRP.
-  </Card>
   <Card title="oxmysql" icon="database">
-    Responsável por toda a comunicação com o banco de dados MySQL/MariaDB.
+    Única dependência obrigatória. Responsável por toda a comunicação com o banco de dados MySQL/MariaDB.
+  </Card>
+  <Card title="Qualquer framework" icon="puzzle-piece">
+    ESX, QBCore, vRP, ox_core ou customizado. A integração é feita adaptando `config/functions.lua`.
   </Card>
 </CardGroup>
 
-<Warning>
-  O script **não funciona** sem o vRP e o oxmysql devidamente configurados. Verifique se ambos estão na sua `server.cfg` antes de prosseguir.
-</Warning>
+<Info>
+  O sistema de notificações detecta automaticamente o **ox_lib** e o utiliza se disponível. Caso contrário, usa o evento de notificação padrão do servidor.
+</Info>
 
 ---
 
@@ -45,7 +45,7 @@ Execute os comandos SQL abaixo no seu banco de dados para criar as tabelas neces
       KEY `idx_user_id`       (`user_id`),
       KEY `idx_user_item`     (`user_id`, `item_key`),
       KEY `idx_user_equipped` (`user_id`, `equipped`)
-    );
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     ```
   </Step>
 
@@ -55,23 +55,25 @@ Execute os comandos SQL abaixo no seu banco de dados para criar as tabelas neces
     ```sql
     CREATE TABLE IF NOT EXISTS `core_pets_featured` (
       `user_id`  INT          NOT NULL,
-      `item_key` VARCHAR(100) NOT NULL,
+      `item_key` VARCHAR(100) DEFAULT NULL,
       PRIMARY KEY (`user_id`)
-    );
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     ```
   </Step>
 
   <Step title="Tabela legada (compatibilidade)">
-    Mantida para migração de dados antigos. Não remova se você está atualizando de uma versão anterior.
+    Mantida para migração de dados de versões anteriores. Não remova se estiver atualizando.
 
     ```sql
     CREATE TABLE IF NOT EXISTS `core_pets_collections` (
-      `id`      INT          NOT NULL AUTO_INCREMENT,
-      `user_id` INT          NOT NULL,
-      `item_key`VARCHAR(100) NOT NULL,
-      `qty`     INT          NOT NULL DEFAULT 0,
+      `id`       INT          NOT NULL AUTO_INCREMENT,
+      `user_id`  INT          NOT NULL,
+      `item_key` VARCHAR(100) NOT NULL,
+      `qty`      INT          NOT NULL DEFAULT 0,
+      UNIQUE KEY `unique_user_item` (`user_id`, `item_key`),
+      KEY `idx_user_id` (`user_id`),
       PRIMARY KEY (`id`)
-    );
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     ```
   </Step>
 </Steps>
@@ -85,87 +87,189 @@ Execute os comandos SQL abaixo no seu banco de dados para criar as tabelas neces
     Coloque a pasta `core-pets` dentro do diretório de recursos do seu servidor (ex: `resources/[core]/`).
   </Step>
 
-  <Step title="Adicione à server.cfg">
-    Certifique-se de que o recurso é iniciado **após** o vRP e o oxmysql.
-
-    ```
-    ensure oxmysql
-    ensure vrp
-    ensure core-pets
-    ```
+  <Step title="Adapte o config/functions.lua">
+    Este é o único arquivo que precisa ser editado para integrar ao seu framework. Veja a seção [Adaptação de Framework](#adaptação-de-framework) abaixo.
   </Step>
 
   <Step title="Execute o SQL">
-    Rode os scripts SQL da seção acima no seu banco de dados antes de iniciar o recurso pela primeira vez.
+    Rode os scripts SQL da seção acima no banco de dados antes de iniciar o recurso pela primeira vez.
   </Step>
 
   <Step title="Configure o recurso">
-    Edite os arquivos na pasta `config/` conforme descrito na seção abaixo.
+    Edite os arquivos em `config/` conforme descrito na seção [Configuração](#configuração).
   </Step>
 
-  <Step title="Inicie o servidor">
-    Reinicie o servidor ou use `refresh` + `start core-pets` no console.
+  <Step title="Adicione à server.cfg">
+    Certifique-se de iniciar o recurso **após** o oxmysql e o seu framework.
+
+    ```
+    ensure oxmysql
+    ensure seu-framework
+    ensure core-pets
+    ```
   </Step>
 </Steps>
 
 ---
 
-## Configuração
+## Adaptação de Framework
 
-Todos os arquivos de configuração estão em `config/`.
+Toda a comunicação com o framework está isolada em `config/functions.lua`. Para integrar com o framework do seu servidor, implemente as seguintes funções nesse arquivo:
 
 <AccordionGroup>
-  <Accordion title="config.lua — Configurações principais" icon="sliders">
-    **Comandos e permissões**
+  <Accordion title="Identificação do jogador" icon="user">
+    O script precisa de um identificador numérico único por jogador para associar dados no banco.
+
     ```lua
-    Pets.Command      = "pets"     -- Comando para abrir o painel do jogador
-    Pets.AdminCommand = "petsadm"  -- Comando para abrir o painel de admin
-    Pets.AdminPermission = "Admin" -- Permissão vRP necessária para o admin
+    -- Retorna o ID único do jogador a partir do source (server ID)
+    function Functions.getUserId(source)
+        -- Exemplo vRP:
+        return vRP.Passport(source)
+
+        -- Exemplo ESX:
+        -- local xPlayer = ESX.GetPlayerFromId(source)
+        -- return xPlayer and xPlayer.getIdentifier() or nil
+
+        -- Exemplo QBCore:
+        -- local Player = QBCore.Functions.GetPlayer(source)
+        -- return Player and Player.PlayerData.citizenid or nil
+
+        -- Exemplo standalone (usa o próprio source):
+        -- return source
+    end
+
+    -- Retorna o source do jogador a partir do ID único
+    function Functions.getUserSource(userId)
+        -- Implemente conforme seu framework
+    end
+
+    -- Retorna o nome completo do jogador
+    function Functions.getUserName(userId)
+        -- Implemente conforme seu framework
+    end
+    ```
+  </Accordion>
+
+  <Accordion title="Permissões de admin" icon="shield">
+    Controla quem pode acessar o painel administrativo (`/petsadm`).
+
+    ```lua
+    -- Retorna true se o jogador tiver a permissão informada
+    function Functions.hasPermission(userId, permission)
+        -- Exemplo vRP:
+        return vRP.HasPermission(userId, permission)
+
+        -- Exemplo ESX (por grupo):
+        -- local xPlayer = ESX.GetPlayerFromId(Functions.getUserSource(userId))
+        -- return xPlayer and xPlayer.getGroup() == permission or false
+
+        -- Exemplo QBCore:
+        -- local Player = QBCore.Functions.GetPlayer(Functions.getUserSource(userId))
+        -- return Player and Player.PlayerData.permission == permission or false
+
+        -- Exemplo standalone (ace permissions):
+        -- return IsPlayerAceAllowed(tostring(Functions.getUserSource(userId)), permission)
+    end
     ```
 
-    **Sistema de trade**
+    <Tip>
+      O valor de `permission` verificado é o definido em `Pets.AdminPermission` no `config/config.lua`. Ajuste-o para corresponder ao sistema de permissões do seu framework (ex: `"admin"`, `"superadmin"`, `"god"`).
+    </Tip>
+  </Accordion>
+
+  <Accordion title="Inventário (opcional)" icon="box">
+    Necessário apenas se você quiser integrar pelúcias ao sistema de itens do seu framework (ex: dar a pelúcia via item no inventário).
+
+    ```lua
+    -- Remove um item do inventário do jogador
+    function Functions.tryGetInventoryItem(userId, item, amount)
+        -- Exemplo ESX:
+        -- local xPlayer = ESX.GetPlayerFromId(Functions.getUserSource(userId))
+        -- if xPlayer and xPlayer.getInventoryItem(item).count >= amount then
+        --     xPlayer.removeInventoryItem(item, amount)
+        --     return true
+        -- end
+        -- return false
+    end
+
+    -- Adiciona um item ao inventário do jogador
+    function Functions.giveInventoryItem(userId, item, amount)
+        -- Exemplo ESX:
+        -- local xPlayer = ESX.GetPlayerFromId(Functions.getUserSource(userId))
+        -- if xPlayer then xPlayer.addInventoryItem(item, amount) end
+    end
+    ```
+  </Accordion>
+
+  <Accordion title="Notificações" icon="bell">
+    O Core Pets detecta automaticamente o **ox_lib** e o usa se disponível. Caso contrário, usa o evento abaixo.
+
+    ```lua
+    -- Evento de notificação disparado pelo client-side quando ox_lib não está presente
+    -- Adapte o nome do evento para o seu framework
+    local NOTIFY_EVENT = "Notify"   -- ex: "esx:showNotification", "QBCore:Notify"
+    ```
+
+    Como o script já tem fallback automático para ox_lib, na maioria dos casos **não é necessário alterar nada** nessa parte.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Configuração
+
+<AccordionGroup>
+  <Accordion title="config/config.lua — Configurações principais" icon="sliders">
+    **Comandos e permissões**
+    ```lua
+    Pets.Command         = "pets"     -- Abre o painel do jogador
+    Pets.AdminCommand    = "petsadm"  -- Abre o painel de admin
+    Pets.AdminPermission = "Admin"    -- Permissão necessária para admin
+    ```
+
+    **Trade**
     ```lua
     Pets.Trade = {
-        RequireProximity = true,   -- Exige proximidade para iniciar trade
-        MaxDistance      = 25.0,   -- Distância máxima em metros
-        RequestTimeout   = 5000,   -- Tempo para aceitar o convite (ms)
-        CleanupInterval  = 300000, -- Intervalo de limpeza de trades pendentes (ms)
-        MaxActiveTrades  = 100,    -- Máximo de trades simultâneos no servidor
-        MaxItemsPerTrade = 50,     -- Máximo de itens por trade
+        RequireProximity = true,    -- Exige proximidade para iniciar
+        MaxDistance      = 25.0,    -- Distância máxima (metros)
+        RequestTimeout   = 5000,    -- Tempo para aceitar o convite (ms)
+        CleanupInterval  = 300000,  -- Limpeza de trades pendentes (ms)
+        MaxActiveTrades  = 100,
+        MaxItemsPerTrade = 50,
     }
     ```
 
-    **Sistema de fusão**
+    **Fusão**
     ```lua
     Pets.Fusion = {
         BaseChance        = 60,  -- Chance base de sucesso (%)
-        RarityJumpPenalty = 25,  -- Penalidade por cada raridade acima da base (%)
-        SameRarityBonus   = 10,  -- Bônus quando ambas as pelúcias têm a mesma raridade (%)
-        MaxChance         = 90,  -- Chance máxima possível (%)
-        MinChance         = 1,   -- Chance mínima possível (%)
+        RarityJumpPenalty = 25,  -- Penalidade por raridade acima da base (%)
+        SameRarityBonus   = 10,  -- Bônus se ambas têm a mesma raridade (%)
+        MaxChance         = 90,
+        MinChance         = 1,
     }
     ```
 
-    **Cor do tema**
+    **Tema**
     ```lua
     Pets.ThemeColor = "#0143bb"  -- Cor principal da interface (hex)
     ```
   </Accordion>
 
-  <Accordion title="catalog.lua — Catálogo de pelúcias" icon="list">
-    Define todas as pelúcias disponíveis no sistema. Cada item segue a estrutura:
+  <Accordion title="config/catalog.lua — Catálogo de pelúcias" icon="list">
+    Define todas as pelúcias disponíveis. Estrutura de cada item:
 
     ```lua
     ["chave_unica"] = {
         type     = "collection",
         name     = "Nome Exibido",
         category = "Categoria",
-        rarity   = "rare",          -- commom | uncommom | rare | epic | legendary
+        rarity   = "rare",   -- commom | uncommom | rare | epic | legendary
         icon     = "https://cdn.corenetwork.dev/...",
         prop = {
             model    = "nome_do_modelo",
-            loop     = true,   -- Animação em loop
-            moving   = true,   -- Anima ao caminhar
+            loop     = true,
+            moving   = true,
             positions = {
                 {
                     id    = "na_mao",
@@ -175,33 +279,25 @@ Todos os arquivos de configuração estão em `config/`.
                     rot   = { x, y, z },
                     model = "nome_do_modelo_posicao"
                 },
-                -- ...
             }
         }
     }
     ```
-
-    <Note>
-      Cada posição dentro de `positions` representa um local diferente do corpo onde a pelúcia pode ser equipada (mão, ombro, cabeça, etc.).
-    </Note>
   </Accordion>
 
-  <Accordion title="webhooks.lua — Webhooks do Discord" icon="discord">
-    Configure as URLs dos webhooks para cada tipo de evento auditado.
-
+  <Accordion title="config/webhooks.lua — Webhooks do Discord" icon="discord">
     ```lua
     webhookURLs = {
-        give     = "https://discord.com/api/webhooks/...",  -- Item adicionado via admin
-        remove   = "https://discord.com/api/webhooks/...",  -- Item removido via admin
-        trade    = "https://discord.com/api/webhooks/...",  -- Trade concluído
-        featured = "https://discord.com/api/webhooks/...",  -- Destaque alterado
-        deposit  = "https://discord.com/api/webhooks/...",  -- Depósito no painel
-        withdraw = "https://discord.com/api/webhooks/...",  -- Saque do painel
-        fusion   = "https://discord.com/api/webhooks/...",  -- Resultado de fusão
+        give     = "",  -- Item adicionado via admin
+        remove   = "",  -- Item removido via admin
+        trade    = "",  -- Trade concluído
+        featured = "",  -- Destaque alterado
+        deposit  = "",  -- Depósito no painel
+        withdraw = "",  -- Saque do painel
+        fusion   = "",  -- Resultado de fusão
     }
     ```
-
-    Deixe qualquer URL como `""` para desativar aquele webhook específico.
+    Deixe qualquer URL como `""` para desativar aquele webhook.
   </Accordion>
 </AccordionGroup>
 
@@ -209,8 +305,8 @@ Todos os arquivos de configuração estão em `config/`.
 
 ## Migração de Dados Antigos
 
-Se você está **atualizando** de uma versão anterior que usava o sistema de stacks (quantidade), o Core Pets detecta automaticamente os dados antigos na tabela `core_pets_collections` e os converte para instâncias individuais na primeira inicialização.
+Se você está atualizando de uma versão anterior que usava stacks (quantidade), o Core Pets converte automaticamente os dados da tabela `core_pets_collections` para instâncias individuais na primeira inicialização.
 
 <Note>
-  A migração é **idempotente** — ela roda apenas uma vez e não duplica dados. Mantenha a tabela `core_pets_collections` no banco de dados mesmo após a migração.
+  A migração roda apenas uma vez e é idempotente — não duplica dados. Mantenha a tabela `core_pets_collections` no banco mesmo após a migração.
 </Note>
