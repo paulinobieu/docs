@@ -86,16 +86,59 @@ Toda a comunicação com o framework está isolada em `config/functions.lua`.
   <Accordion title="Identificação do jogador" icon="user">
     ```lua
     function Functions.getUserId(source)
-        -- Exemplo vRP:
+        -- Exemplo vRP (Creative Enchanted):
         return vRP.Passport(source)
+
+        -- Exemplo vRPex / vRP padrão:
+        -- return vRP.getUserId(source)
+
+        -- Exemplo ESX:
+        -- local xPlayer = ESX.GetPlayerFromId(source)
+        -- return xPlayer and xPlayer.getIdentifier() or nil
+
+        -- Exemplo QBCore:
+        -- local Player = QBCore.Functions.GetPlayer(source)
+        -- return Player and Player.PlayerData.citizenid or nil
     end
 
     function Functions.getUserSource(user_id)
+        -- Exemplo vRP (Creative Enchanted):
         return vRP.Source(user_id)
+
+        -- Exemplo vRPex / vRP padrão:
+        -- return vRP.getUserSource(user_id)
+
+        -- Exemplo ESX:
+        -- for _, xPlayer in pairs(ESX.GetExtendedPlayers()) do
+        --     if xPlayer.getIdentifier() == user_id then return xPlayer.source end
+        -- end
+
+        -- Exemplo QBCore:
+        -- for _, src in ipairs(QBCore.Functions.GetPlayers()) do
+        --     local Player = QBCore.Functions.GetPlayer(src)
+        --     if Player and Player.PlayerData.citizenid == user_id then return src end
+        -- end
     end
 
     function Functions.getUserName(user_id)
+        -- Exemplo vRP (Creative Enchanted):
         return vRP.FullName(user_id)
+
+        -- Exemplo vRPex / vRP padrão:
+        -- local identity = vRP.getUserIdentity(user_id)
+        -- return identity and (identity.firstname .. " " .. identity.name) or "Desconhecido"
+
+        -- Exemplo ESX:
+        -- local xPlayer = ESX.GetPlayerFromIdentifier(user_id)
+        -- return xPlayer and xPlayer.getName() or "Desconhecido"
+
+        -- Exemplo QBCore:
+        -- local Player = QBCore.Functions.GetPlayerByCitizenId(user_id)
+        -- if Player then
+        --     local ci = Player.PlayerData.charinfo
+        --     return ci.firstname .. " " .. ci.lastname
+        -- end
+        -- return "Desconhecido"
     end
     ```
   </Accordion>
@@ -106,14 +149,24 @@ Toda a comunicação com o framework está isolada em `config/functions.lua`.
     ```lua
     function Functions.hasPermission(user_id, permissions)
         if not permissions then return true end
-        if type(permissions) == "table" then
-            for _, perm in ipairs(permissions) do
-                -- Analisa "grupo@nivel" se necessário
-                if vRP.HasGroup(user_id, perm) then return true end
-            end
-            return false
+        local list = type(permissions) == "table" and permissions or { permissions }
+
+        for _, perm in ipairs(list) do
+            -- Exemplo vRP (custom) — aceita "grupo@nivel":
+            if vRP.HasGroup(user_id, perm) then return true end
+
+            -- Exemplo vRPex / vRP padrão:
+            -- if vRP.hasPermission(user_id, perm) then return true end
+
+            -- Exemplo ESX (por grupo):
+            -- local xPlayer = ESX.GetPlayerFromIdentifier(user_id)
+            -- if xPlayer and xPlayer.getGroup() == perm then return true end
+
+            -- Exemplo QBCore:
+            -- local Player = QBCore.Functions.GetPlayerByCitizenId(user_id)
+            -- if Player and Player.PlayerData.permission == perm then return true end
         end
-        return vRP.HasGroup(user_id, permissions)
+        return false
     end
     ```
 
@@ -128,13 +181,35 @@ Toda a comunicação com o framework está isolada em `config/functions.lua`.
     ```lua
     function Functions.getUsersByPermission(permission)
         if not permission then return {} end
-        -- Deve retornar uma table de sources (não user_ids) online com aquela permissão
-        -- Exemplo vRP:
-        local users = vRP.NumPermission(permission) or {}
         local result = {}
+
+        -- Exemplo vRP (Creative Enchanted):
+        local users = vRP.NumPermission(permission) or {}
         for passport, src in pairs(users) do
             if src then result[#result + 1] = src end
         end
+
+        -- Exemplo vRPex / vRP padrão:
+        -- for _, user_id in ipairs(vRP.getUsersByPermission(permission) or {}) do
+        --     local src = vRP.getUserSource(user_id)
+        --     if src then result[#result + 1] = src end
+        -- end
+
+        -- Exemplo ESX (por grupo):
+        -- for _, xPlayer in pairs(ESX.GetExtendedPlayers()) do
+        --     if xPlayer.getGroup() == permission then
+        --         result[#result + 1] = xPlayer.source
+        --     end
+        -- end
+
+        -- Exemplo QBCore:
+        -- for _, src in ipairs(QBCore.Functions.GetPlayers()) do
+        --     local Player = QBCore.Functions.GetPlayer(src)
+        --     if Player and Player.PlayerData.permission == permission then
+        --         result[#result + 1] = src
+        --     end
+        -- end
+
         return result
     end
     ```
@@ -148,12 +223,48 @@ Toda a comunicação com o framework está isolada em `config/functions.lua`.
     ```lua
     -- Débita dinheiro do jogador (banco + dinheiro em mão). Retorna true se bem-sucedido.
     function Functions.tryPayment(user_id, amount)
+        -- Exemplo vRP (Creative Enchanted):
         return vRP.PaymentFull(user_id, amount)
+
+        -- Exemplo vRPex / vRP padrão:
+        -- return vRP.tryFullPayment(user_id, amount)
+
+        -- Exemplo ESX:
+        -- local xPlayer = ESX.GetPlayerFromIdentifier(user_id)
+        -- if not xPlayer then return false end
+        -- if xPlayer.getMoney() >= amount then
+        --     xPlayer.removeMoney(amount); return true
+        -- elseif xPlayer.getAccount("bank").money >= amount then
+        --     xPlayer.removeAccountMoney("bank", amount); return true
+        -- end
+        -- return false
+
+        -- Exemplo QBCore:
+        -- local Player = QBCore.Functions.GetPlayerByCitizenId(user_id)
+        -- if not Player then return false end
+        -- if Player.PlayerData.money.cash >= amount then
+        --     return Player.Functions.RemoveMoney("cash", amount)
+        -- elseif Player.PlayerData.money.bank >= amount then
+        --     return Player.Functions.RemoveMoney("bank", amount)
+        -- end
+        -- return false
     end
 
     -- Deposita dinheiro na conta bancária do jogador (usado no saque quando Withdraw.Item = nil)
     function Functions.giveBankMoney(user_id, amount)
+        -- Exemplo vRP (Creative Enchanted):
         return vRP.GiveBank(user_id, amount)
+
+        -- Exemplo vRPex / vRP padrão:
+        -- return vRP.giveBankMoney(user_id, amount)
+
+        -- Exemplo ESX:
+        -- local xPlayer = ESX.GetPlayerFromIdentifier(user_id)
+        -- if xPlayer then xPlayer.addAccountMoney("bank", amount) end
+
+        -- Exemplo QBCore:
+        -- local Player = QBCore.Functions.GetPlayerByCitizenId(user_id)
+        -- if Player then Player.Functions.AddMoney("bank", amount) end
     end
     ```
   </Accordion>
@@ -162,24 +273,78 @@ Toda a comunicação com o framework está isolada em `config/functions.lua`.
     ```lua
     -- Retorna a quantidade e o slot do item no inventário do jogador
     function Functions.getInventoryItemAmount(user_id, item)
+        -- Exemplo vRP (Creative Enchanted):
         local data = vRP.InventoryItemAmount(user_id, item)
         return tonumber(data[1]) or 0, data[2] or item
+
+        -- Exemplo vRPex / vRP padrão:
+        -- return vRP.getInventoryItemAmount(user_id, item) or 0, item
+
+        -- Exemplo ESX:
+        -- local xPlayer = ESX.GetPlayerFromIdentifier(user_id)
+        -- local data    = xPlayer and xPlayer.getInventoryItem(item)
+        -- return data and data.count or 0, item
+
+        -- Exemplo QBCore:
+        -- local Player = QBCore.Functions.GetPlayerByCitizenId(user_id)
+        -- local found  = Player and Player.Functions.GetItemByName(item)
+        -- return found and found.amount or 0, item
     end
 
     -- Remove item do inventário. Retorna true se bem-sucedido.
     -- Usado quando RequireItems = true para consumir o item no reabastecimento.
     function Functions.tryGetInventoryItem(user_id, item, amount)
+        -- Exemplo vRP (Creative Enchanted):
         return vRP.TakeItem(user_id, item, amount, true)
+
+        -- Exemplo vRPex / vRP padrão:
+        -- return vRP.tryGetInventoryItem(user_id, item, amount, true)
+
+        -- Exemplo ESX:
+        -- local xPlayer = ESX.GetPlayerFromIdentifier(user_id)
+        -- if xPlayer and xPlayer.getInventoryItem(item).count >= amount then
+        --     xPlayer.removeInventoryItem(item, amount); return true
+        -- end
+        -- return false
+
+        -- Exemplo QBCore:
+        -- local Player = QBCore.Functions.GetPlayerByCitizenId(user_id)
+        -- return Player and Player.Functions.RemoveItem(item, amount) or false
     end
 
     -- Dá item ao jogador (usado no saque de receita quando Withdraw.Item está definido)
     function Functions.giveInventoryItem(user_id, item, amount)
+        -- Exemplo vRP (Creative Enchanted):
         return vRP.GenerateItem(user_id, item, amount, true)
+
+        -- Exemplo vRPex / vRP padrão:
+        -- return vRP.giveInventoryItem(user_id, item, amount, true)
+
+        -- Exemplo ESX:
+        -- local xPlayer = ESX.GetPlayerFromIdentifier(user_id)
+        -- if xPlayer then xPlayer.addInventoryItem(item, amount) end
+
+        -- Exemplo QBCore:
+        -- local Player = QBCore.Functions.GetPlayerByCitizenId(user_id)
+        -- if Player then Player.Functions.AddItem(item, amount) end
     end
 
     -- Retorna o nome de exibição do item para a interface
     function Functions.getItemName(itemId)
+        -- Exemplo vRP (Creative Enchanted):
         return ItemName(itemId) or itemId
+
+        -- Exemplo vRPex / vRP padrão:
+        -- local data = vRP.items[itemId]
+        -- return data and data.name or itemId
+
+        -- Exemplo ESX:
+        -- local item = ESX.GetItemLabel(itemId)
+        -- return item or itemId
+
+        -- Exemplo QBCore:
+        -- local item = QBCore.Shared.Items[itemId]
+        -- return item and item.label or itemId
     end
     ```
   </Accordion>

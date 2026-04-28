@@ -60,17 +60,60 @@ Toda a comunicação com o framework está isolada em `config/functions.lua`.
   <Accordion title="Identificação do jogador" icon="user">
     ```lua
     function Functions.getUserId(source)
-        -- Exemplo vRP:
+        -- Exemplo vRP (Creative Enchanted):
         return vRP.Passport(source)
+
+        -- Exemplo vRPex / vRP padrão:
+        -- return vRP.getUserId(source)
+
+        -- Exemplo ESX:
+        -- local xPlayer = ESX.GetPlayerFromId(source)
+        -- return xPlayer and xPlayer.getIdentifier() or nil
+
+        -- Exemplo QBCore:
+        -- local Player = QBCore.Functions.GetPlayer(source)
+        -- return Player and Player.PlayerData.citizenid or nil
     end
 
     function Functions.getUserSource(user_id)
+        -- Exemplo vRP (Creative Enchanted):
         return vRP.Source(user_id)
+
+        -- Exemplo vRPex / vRP padrão:
+        -- return vRP.getUserSource(user_id)
+
+        -- Exemplo ESX:
+        -- for _, xPlayer in pairs(ESX.GetExtendedPlayers()) do
+        --     if xPlayer.getIdentifier() == user_id then return xPlayer.source end
+        -- end
+
+        -- Exemplo QBCore:
+        -- for _, src in ipairs(QBCore.Functions.GetPlayers()) do
+        --     local Player = QBCore.Functions.GetPlayer(src)
+        --     if Player and Player.PlayerData.citizenid == user_id then return src end
+        -- end
     end
 
     function Functions.getUserName(user_id)
+        -- Exemplo vRP (Creative Enchanted):
         local name = vRP.FullName(user_id)
         return name or "Desconhecido"
+
+        -- Exemplo vRPex / vRP padrão:
+        -- local identity = vRP.getUserIdentity(user_id)
+        -- return identity and (identity.firstname .. " " .. identity.name) or "Desconhecido"
+
+        -- Exemplo ESX:
+        -- local xPlayer = ESX.GetPlayerFromIdentifier(user_id)
+        -- return xPlayer and xPlayer.getName() or "Desconhecido"
+
+        -- Exemplo QBCore:
+        -- local Player = QBCore.Functions.GetPlayerByCitizenId(user_id)
+        -- if Player then
+        --     local ci = Player.PlayerData.charinfo
+        --     return ci.firstname .. " " .. ci.lastname
+        -- end
+        -- return "Desconhecido"
     end
     ```
   </Accordion>
@@ -81,13 +124,24 @@ Toda a comunicação com o framework está isolada em `config/functions.lua`.
     ```lua
     function Functions.hasPermission(user_id, permissions)
         if not permissions then return true end
-        if type(permissions) == "table" then
-            for _, perm in ipairs(permissions) do
-                if vRP.HasGroup(user_id, perm) then return true end
-            end
-            return false
+        local list = type(permissions) == "table" and permissions or { permissions }
+
+        for _, perm in ipairs(list) do
+            -- Exemplo vRP (Creative Enchanted):
+            if vRP.HasGroup(user_id, perm) then return true end
+
+            -- Exemplo vRPex / vRP padrão:
+            -- if vRP.hasPermission(user_id, perm) then return true end
+
+            -- Exemplo ESX (por grupo):
+            -- local xPlayer = ESX.GetPlayerFromIdentifier(user_id)
+            -- if xPlayer and xPlayer.getGroup() == perm then return true end
+
+            -- Exemplo QBCore:
+            -- local Player = QBCore.Functions.GetPlayerByCitizenId(user_id)
+            -- if Player and Player.PlayerData.permission == perm then return true end
         end
-        return vRP.HasGroup(user_id, permissions)
+        return false
     end
     ```
   </Accordion>
@@ -97,16 +151,22 @@ Toda a comunicação com o framework está isolada em `config/functions.lua`.
 
     ```lua
     function Functions.hasItem(user_id, item, amount)
-        -- Exemplo vRP:
-        return vRP.ConsultItem(user_id, item, amount or 1)
+        local qty = amount or 1
+
+        -- Exemplo vRP (Creative Enchanted):
+        return vRP.ConsultItem(user_id, item, qty)
+
+        -- Exemplo vRPex / vRP padrão:
+        -- return vRP.getInventoryItemAmount(user_id, item) >= qty
 
         -- Exemplo ESX:
         -- local xPlayer = ESX.GetPlayerFromId(Functions.getUserSource(user_id))
-        -- return xPlayer and xPlayer.getInventoryItem(item).count >= (amount or 1)
+        -- return xPlayer and xPlayer.getInventoryItem(item).count >= qty
 
         -- Exemplo QBCore:
         -- local Player = QBCore.Functions.GetPlayer(Functions.getUserSource(user_id))
-        -- return Player and Player.Functions.GetItemByName(item) ~= nil
+        -- local found  = Player and Player.Functions.GetItemByName(item)
+        -- return found and (found.amount or 0) >= qty
     end
     ```
   </Accordion>
