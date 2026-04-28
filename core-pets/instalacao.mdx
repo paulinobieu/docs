@@ -181,6 +181,36 @@ Toda a comunicação com o framework está isolada em `config/functions.lua`. Pa
     ```
   </Accordion>
 
+  <Accordion title="Anticheat (spawn de prop)" icon="shield-halved">
+    Chamada server-side **antes** de qualquer prop ser criado no client. Use para whitelistar o modelo no seu anticheat. Retornar `false` aborta o spawn para aquele jogador.
+
+    ```lua
+    function Functions.OnPropSpawn(source, data)
+        -- Exemplo com PL_PROTECT:
+        -- exports["PL_PROTECT"]:setSpawnClient(source, data.prop)
+        return true
+    end
+    ```
+
+    **Campos disponíveis em `data`**
+
+    | Campo      | Tipo     | Descrição                              |
+    |------------|----------|----------------------------------------|
+    | `prop`     | `string` | Nome do modelo do prop                 |
+    | `bone`     | `number` | Bone de attach no ped                  |
+    | `posX/Y/Z` | `number` | Posição de offset                      |
+    | `rotX/Y/Z` | `number` | Rotação de offset                      |
+    | `dict`     | `string` | Dicionário de animação                 |
+    | `anim`     | `string` | Nome da animação                       |
+    | `flag`     | `number` | Flag da animação                       |
+    | `itemKey`  | `string` | Chave da pelúcia no catálogo           |
+    | `requestId`| `string` | ID único da requisição                 |
+
+    <Tip>
+      Se o seu anticheat não precisa de integração explícita para props, basta manter `return true` sem alterações.
+    </Tip>
+  </Accordion>
+
   <Accordion title="Notificações" icon="bell">
     O Core Pets detecta automaticamente o **ox_lib** e o usa se disponível. Caso contrário, usa o evento abaixo.
 
