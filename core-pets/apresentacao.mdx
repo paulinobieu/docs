@@ -3,7 +3,7 @@ title: "Apresentação"
 description: "Conheça o Core Pets, o sistema completo de coleção e gerenciamento de pelúcias para FiveM."
 ---
 
-O **Core Pets** é um sistema completo de coleção, gerenciamento e exibição de pelúcias para servidores FiveM. Com mais de 30 itens colecionáveis divididos em categorias e raridades, o script oferece mecânicas profundas de progressão, troca entre jogadores, fusão de itens e benefícios passivos que impactam diretamente a gameplay.
+O **Core Pets** é um sistema completo de coleção, gerenciamento e exibição de pelúcias para servidores FiveM. Com mais de 30 itens colecionáveis divididos em categorias e raridades, cada jogador pode possuir **um exemplar de cada pelúcia**, formando uma coleção única. O script oferece mecânicas profundas de progressão, troca entre jogadores, fusão de itens e benefícios passivos que impactam diretamente a gameplay.
 
 ## Funcionalidades
 
@@ -21,7 +21,7 @@ O **Core Pets** é um sistema completo de coleção, gerenciamento e exibição 
     16 tipos de benefícios que afetam stamina, salário, crafting, combustível, vendas e muito mais.
   </Card>
   <Card title="Troca entre Jogadores" icon="arrow-right-arrow-left">
-    Sistema de trade com validação de proximidade, timeout de confirmação e auditoria via webhook.
+    Sistema de trade com validação de proximidade e bloqueio automático caso o destinatário já possua a pelúcia oferecida.
   </Card>
   <Card title="Fusão de Pelúcias" icon="wand-magic-sparkles">
     Combine duas pelúcias para tentar criar uma de raridade superior com sistema probabilístico.
@@ -122,9 +122,10 @@ A fusão permite combinar duas pelúcias para tentar criar uma nova de raridade 
     A fórmula considera a diferença de raridade entre o alvo e o material, com bônus de +10% se ambas forem da mesma raridade. A chance fica entre **1% e 90%**.
   </Step>
   <Step title="Resultado">
-    - **Sucesso:** uma nova pelúcia da raridade alvo é criada.
+    - **Sucesso:** uma nova pelúcia da raridade alvo é criada, excluindo as que o jogador já possui.
     - **Falha:** uma nova pelúcia da **pior raridade** dos materiais é criada.
     - Em ambos os casos, as duas pelúcias originais são **consumidas**.
+    - Se o jogador já possui todas as pelúcias da raridade alvo, o sistema tenta automaticamente uma raridade abaixo em cascata.
   </Step>
 </Steps>
 

@@ -23,7 +23,7 @@
         },
         {
           "anchor": "Discord",
-          "href": "https://discord.gg/corenetwork",
+          "href": "https://discord.gg/57DNCnkagj",
           "icon": "discord"
         }
       ]
@@ -72,13 +72,13 @@
     "links": [
       {
         "label": "Suporte",
-        "href": "https://discord.gg/corenetwork"
+        "href": "https://discord.gg/57DNCnkagj"
       }
     ]
   },
   "footer": {
     "socials": {
-      "discord": "https://discord.gg/corenetwork"
+      "discord": "https://discord.gg/57DNCnkagj"
     }
   }
 }

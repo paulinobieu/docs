@@ -6,7 +6,7 @@ description: "Funções exportadas pelo Core Pets para integração com outros s
 Os exports do Core Pets permitem que outros recursos do servidor leiam benefícios, concedam XP, abram lootboxes e manipulem instâncias diretamente. Todos os exports são **server-side**.
 
 <Note>
-  O parâmetro `passport` corresponde ao identificador único do jogador no vRP (`user_id`). Você pode obtê-lo via `vrp.getUserId(source)`.
+  O parâmetro `passport` corresponde ao identificador único do jogador definido pela sua integração em `config/functions.lua` (função `getUserId`).
 </Note>
 
 ---
@@ -154,14 +154,16 @@ local result = exports["core-pets"]:OpenLootBox(passport, fixedRarity)
 | `passport`    | `number` | ✓           | user_id do jogador                                                         |
 | `fixedRarity` | `string` |             | Força uma raridade específica (`"commom"`, `"rare"`, etc.). Sorteio livre se omitido. |
 
-**Retorno:** `table` com os dados da instância criada, ou `nil` em caso de erro.
+**Retorno:** `table` com os dados da instância criada, ou `nil` se o jogador já possui todas as pelúcias disponíveis.
+
+**Comportamento de cascata:** pelúcias que o jogador já possui são excluídas do pool de sorteio. Se a raridade solicitada estiver completamente coletada, o sistema tenta automaticamente raridades abaixo em cascata até encontrar uma disponível.
 
 **Exemplo**
 ```lua
 -- Lootbox aleatória
 local pet = exports["core-pets"]:OpenLootBox(passport)
 
--- Lootbox garantida rara
+-- Lootbox garantida rara (ou inferior em cascata se raro já completo)
 local pet = exports["core-pets"]:OpenLootBox(passport, "rare")
 ```
 
@@ -190,12 +192,16 @@ local instance = exports["core-pets"]:GiveInstance(passport, itemKey, opts)
 | `level`  | `number` | `1`    | Nível inicial da pelúcia        |
 | `xp`     | `number` | `0`    | XP inicial da pelúcia           |
 
-**Retorno:** `table` com os dados da instância criada, ou `nil` em caso de erro.
+**Retorno:** `table` com os dados da instância criada, ou `nil` se o jogador já possui aquela pelúcia.
 
 **Exemplo**
 ```lua
 -- Dar um Pikachu nível 3 ao jogador
 local instance = exports["core-pets"]:GiveInstance(passport, "pikachu", { level = 3 })
+
+if not instance then
+    -- jogador já possui este item
+end
 ```
 
 ---
