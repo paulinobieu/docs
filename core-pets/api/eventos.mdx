@@ -1,0 +1,236 @@
+---
+title: "Eventos"
+description: "Eventos e callbacks do Core Pets para integração client-side e server-side."
+icon: "bolt"
+---
+
+O Core Pets expõe eventos para abrir/fechar a interface, reagir a ações do sistema e integrar com outros scripts. Os eventos estão organizados por direção de comunicação.
+
+---
+
+## Eventos Client-Side
+
+Eventos que podem ser chamados ou escutados no lado do cliente.
+
+### `core-pets:openUI`
+
+Abre o painel de pelúcias do jogador, desde que ele tenha permissão.
+
+<CodeGroup>
+  ```lua Disparar do client
+  TriggerEvent("core-pets:openUI")
+  ```
+
+  ```lua Disparar do server
+  TriggerClientEvent("core-pets:openUI", source)
+  ```
+</CodeGroup>
+
+---
+
+### `core-pets:closeUI`
+
+Fecha o painel de pelúcias do jogador.
+
+<CodeGroup>
+  ```lua Disparar do client
+  TriggerEvent("core-pets:closeUI")
+  ```
+
+  ```lua Disparar do server
+  TriggerClientEvent("core-pets:closeUI", source)
+  ```
+</CodeGroup>
+
+---
+
+### `core-pets:onPanelOpen` *(read-only)*
+
+Disparado automaticamente quando a interface do Core Pets é aberta. Use para reagir a esse evento em outros scripts, como remover armas da mão do jogador.
+
+```lua
+AddEventHandler("core-pets:onPanelOpen", function()
+    -- Remove arma da mão ao abrir o painel
+    SetCurrentPedWeapon(PlayerPedId(), `WEAPON_UNARMED`, true)
+end)
+```
+
+<Note>
+  Este evento é somente de leitura — não dispare-o manualmente para abrir a interface. Use `core-pets:openUI` para isso.
+</Note>
+
+---
+
+## Eventos Server-Side
+
+Eventos que devem ser escutados ou disparados no lado do servidor.
+
+### `core-pets:setEquipped` *(interno)*
+
+Sincroniza o estado de equip de uma pelúcia com o servidor. Disparado automaticamente pelo client quando o jogador equipa ou desequipa um item.
+
+<Warning>
+  Este evento é de uso interno. Não o dispare manualmente em outros scripts para evitar inconsistências no estado do servidor.
+</Warning>
+
+---
+
+## NUI Message: `core-pets:nuiMessage`
+
+O servidor envia mensagens para a interface React via `nuiMessage`. Os dados variam conforme o campo `action`.
+
+```lua
+RegisterNetEvent("core-pets:nuiMessage", function(action, data)
+    -- Tratar conforme action
+end)
+```
+
+### Ações disponíveis
+
+<AccordionGroup>
+  <Accordion title="setData — Carrega dados iniciais na interface" icon="database">
+    Enviada ao abrir o painel. Popula a interface com o catálogo, coleção e destaque do jogador.
+
+    ```lua
+    -- data contém:
+    {
+        catalog  = { ... },  -- Catálogo completo de pelúcias
+        items    = { ... },  -- Instâncias do jogador
+        featured = "chave"   -- Chave da pelúcia em destaque (ou nil)
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="setVisible — Controla a visibilidade da interface" icon="eye">
+    ```lua
+    -- data contém:
+    {
+        visible = true  -- true para exibir, false para ocultar
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="trade_opened — Abre o painel de trade" icon="arrow-right-arrow-left">
+    Enviada quando um trade é aceito por ambas as partes.
+
+    ```lua
+    -- data contém:
+    {
+        tradeId  = 123,    -- ID único do trade
+        selfSide = "A"     -- Lado do jogador no trade ("A" ou "B")
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="trade_finished — Resultado do trade" icon="check">
+    Enviada quando o trade é concluído (sucesso ou cancelamento).
+
+    ```lua
+    -- data contém:
+    {
+        success = true  -- true se concluído, false se cancelado
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="fusionResult — Resultado da fusão" icon="wand-magic-sparkles">
+    Enviada após o processamento de uma tentativa de fusão.
+
+    ```lua
+    -- data contém:
+    {
+        success = true,   -- true se gerou a raridade alvo, false se falhou
+        result  = { ... } -- Dados da nova instância criada
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="objectState — Sincroniza objetos 3D entre jogadores" icon="cube">
+    Enviada para todos os clientes quando um jogador equipa ou desequipa uma pelúcia, para renderizar o objeto 3D no modelo dos outros jogadores.
+
+    ```lua
+    -- data contém:
+    {
+        playerId = 1,       -- ID do jogador (net ID)
+        itemKey  = "toothless",
+        position = "na_mao",
+        active   = true     -- true = equipar, false = remover
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## NUI Callbacks
+
+Callbacks registrados no client que a interface React pode chamar diretamente.
+
+```lua
+RegisterNUICallback("core-pets", function(data, cb)
+    local action = data.action
+    -- ...
+    cb({ ok = true })
+end)
+```
+
+### Ações de hold (objeto 3D)
+
+| Action              | Descrição                                                  |
+|---------------------|------------------------------------------------------------|
+| `holdStart`         | Inicia o equip de um objeto na posição padrão do pet       |
+| `holdStop`          | Remove o objeto 3D equipado                                |
+| `holdStopMain`      | Remove apenas o hold do tipo "main" (único)                |
+| `holdStopPosition`  | Remove o hold de uma posição específica                    |
+| `holdGetState`      | Retorna o estado atual dos holds do jogador                |
+
+### Ações de posicionamento
+
+| Action              | Descrição                                                        |
+|---------------------|------------------------------------------------------------------|
+| `positionsOpen`     | Abre o modo de seleção de posições com câmera customizada        |
+| `positionsSelect`   | Confirma a posição selecionada                                    |
+| `positionsClose`    | Cancela a seleção e fecha o modo de posicionamento               |
+
+### Ações de trade
+
+| Action              | Descrição                                                        |
+|---------------------|------------------------------------------------------------------|
+| `tradeGetNearby`    | Retorna lista de jogadores próximos para iniciar um trade        |
+
+**Resposta de `tradeGetNearby`:**
+```lua
+{
+    ok = true,
+    players = {
+        { id = 1, name = "João Silva" },
+        { id = 2, name = "Maria Souza" },
+    }
+}
+```
+
+---
+
+## Integração Completa: Exemplo de Rota
+
+O exemplo abaixo mostra a integração do Core Pets em um script de coleta de rota, concedendo bônus de valor e XP ao jogador.
+
+```lua
+-- server-side, em outro script
+local corePets = exports["core-pets"]
+
+RegisterNetEvent("minhaRota:concluir", function(rotaId)
+    local src      = source
+    local passport = vrp.getUserId(src)
+    local baseValue = 5000
+
+    -- Aplica bônus de CollectRoute
+    local finalValue = corePets:Apply(passport, "CollectRoute", baseValue)
+
+    -- Concede XP no pet com esse benefício
+    corePets:GrantXP(passport, "CollectRoute")
+
+    -- Paga o jogador
+    vrp.giveMoney(passport, finalValue)
+end)
+```

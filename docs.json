@@ -22,6 +22,25 @@
             ]
           }
         ]
+      },
+      {
+        "tab": "Core Pets",
+        "groups": [
+          {
+            "group": "Geral",
+            "pages": [
+              "core-pets/apresentacao",
+              "core-pets/instalacao"
+            ]
+          },
+          {
+            "group": "API",
+            "pages": [
+              "core-pets/api/exports",
+              "core-pets/api/eventos"
+            ]
+          }
+        ]
       }
     ],
     "global": {
